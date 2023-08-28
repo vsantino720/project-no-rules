@@ -6,7 +6,7 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/Main Menu.unity
+    path: Assets/Scenes/MainMenu.unity
     guid: f6d894ba87cfc714099232792f304d90
   - enabled: 1
     path: Assets/Scenes/Isometric.unity
