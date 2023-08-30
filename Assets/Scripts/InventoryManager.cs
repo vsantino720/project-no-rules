@@ -1,11 +1,15 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class InventoryManager : MonoBehaviour
 {
     public static InventoryManager Instance;
-    public List <Item> Items = new List<Item> ();
+    public List<Item> Items = new List<Item>();
+
+    public Transform ItemContent;
+    public GameObject InventoryItem;
 
     private void Awake()
     {
@@ -20,6 +24,19 @@ public class InventoryManager : MonoBehaviour
     public void Remove(Item item)
     {
         Items.Remove(item);
+    }
+
+    public void ListItems()
+    {
+        foreach (var item in Items)
+        {
+            GameObject obj = Instantiate(InventoryItem, ItemContent);
+            var itemName = obj.transform.Find("Item/ItemName").GetComponent<Text>();
+            var itemIcon = obj.transform.Find("Item/ItemIcon").GetComponent<Image>();
+
+            itemName.text = item.itemName;
+            itemIcon.sprite = item.icon;
+        }
     }
 
 }
