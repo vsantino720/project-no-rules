@@ -8,10 +8,12 @@ public class DamageController : MonoBehaviour
 
     [SerializeField] private HealthController healthController;
 
-    private void OnTriggerEnter3D(Collider collision)
+    void OnCollisionEnter(Collision collision)
     {
-        if (collision.CompareTag("Player"))
+        if (collision.gameObject.CompareTag("Player"))
         {
+            Debug.Log("Collided with player...");
+
             healthController.TakeDamage(damage);
         }
     }
