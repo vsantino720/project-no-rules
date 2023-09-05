@@ -11,12 +11,13 @@ public class EnemyController : MonoBehaviour
 
     [Header("AI Control Parameters")]
     [SerializeField] int alertRadius;
+    [SerializeField] int escapeRadius;
     [SerializeField] float visualDetectionAngle;
     [SerializeField] EnemyAIMovementType movementType = EnemyAIMovementType.Chase;
     [SerializeField] EnemyDetectionType detectionType = EnemyDetectionType.Radial;
     [SerializeField] List<Transform> patrolNodes = new List<Transform>();
     [SerializeField] private EnemyAIState currentAIState = EnemyAIState.Active;
-    [SerializeField] bool canEscapeEnemy = false;
+    [SerializeField] bool canEscapeEnemy = true;
     [SerializeField] LayerMask targetLayers;
 
     private int currentPatrolIndex = 0;
@@ -40,7 +41,10 @@ public class EnemyController : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        currentAIState = EnemyAIState.Idle;
+        currentAIState = EnemyAIState.Patrol;
+
+        // Set initial state
+        SetState();
     }
 
     // Update is called once per frame
@@ -48,6 +52,22 @@ public class EnemyController : MonoBehaviour
     {
         CheckState();
         SetAnimationState();
+    }
+
+    private void SetState()
+    {
+        switch (currentAIState)
+        {
+            case EnemyAIState.Active:
+                SetActive();
+                break;
+            case EnemyAIState.Idle:
+                SetIdle();
+                break;
+            case EnemyAIState.Patrol:
+                SetPatrol();
+                break;
+        }
     }
 
     private void CheckState()
@@ -58,7 +78,7 @@ public class EnemyController : MonoBehaviour
                 PerformActive();
                 break;
             case EnemyAIState.Idle:
-                PerformIdle();
+                SetIdle();
                 break;
             case EnemyAIState.Patrol:
                 PerformPatrol();
@@ -68,19 +88,48 @@ public class EnemyController : MonoBehaviour
 
     private void PerformActive()
     {
-        agent.destination = target.position;
+        switch (movementType)
+        {
+            case EnemyAIMovementType.Chase:
+                agent.destination = target.position;
+                break;
+            case EnemyAIMovementType.Avoid:
+                agent.destination = GetAvoidDestination();
+                break;
+        }
 
         // If player escapes return to patrol
-        if (canEscapeEnemy && !InPlayerRange())
+        if (canEscapeEnemy && IsTargetEscaped())
         {
-            currentAIState = EnemyAIState.Patrol;
+            SetPatrol();
         }
     }
 
-    private void PerformIdle()
+    private void SetActive()
     {
-        // Reset the destination and pathfinding alg
+        Debug.Log("Switching to Active state...");
+        currentAIState = EnemyAIState.Active;
+    }
+
+    private Vector3 GetAvoidDestination()
+    {
+        // Opposite heading of target multiplied by the magnitude of the alertRadius (try to escape alert radius)
+        if (agent.remainingDistance <= alertRadius)
+        {
+            Vector3 heading = (transform.position - target.position).normalized;
+            return (heading * alertRadius * 1.5f);
+        }
+        else
+        {
+            return agent.destination;
+        }
+    }
+
+    private void SetIdle()
+    {
+        Debug.Log("Switching to Idle state...");
         agent.ResetPath();
+        agent.isStopped = true;
     }
 
     private void PerformPatrol()
@@ -104,8 +153,18 @@ public class EnemyController : MonoBehaviour
         // If we detect player
         if (InPlayerRange())
         {
-            currentAIState = EnemyAIState.Active;
+            Debug.Log("Detected Player!");
+
+            SetActive();
         }
+    }
+
+    private void SetPatrol()
+    {
+        Debug.Log("Switching to Patrol state...");
+        currentAIState = EnemyAIState.Patrol;
+
+        agent.destination = patrolNodes[currentPatrolIndex].position;
     }
 
     private void SetAnimationState()
@@ -132,6 +191,11 @@ public class EnemyController : MonoBehaviour
         return inRange;
     }
 
+    private bool IsTargetEscaped()
+    {
+        return (Vector3.Distance(transform.position, target.position) <= escapeRadius);
+    }
+
     private bool RadiusCheck()
     {
         return (Vector3.Distance(transform.position, target.position) <= alertRadius);
@@ -143,7 +207,7 @@ public class EnemyController : MonoBehaviour
 
         Vector3 heading = (agent.destination - transform.position).normalized;
         float dotProduct = Vector3.Dot(heading, transform.forward);
-        if (dotProduct < Math.Cos(visualDetectionAngle))
+        if (dotProduct < Math.Cos(Mathf.Deg2Rad * visualDetectionAngle))
         {
             RaycastHit hit = new RaycastHit();
             Ray ray = new Ray(transform.position, heading);
@@ -157,6 +221,11 @@ public class EnemyController : MonoBehaviour
         }
 
         return inRange;
+    }
+
+    private void OnDrawGizmos()
+    {
+        Gizmos.DrawWireSphere(transform.position, alertRadius);
     }
 
     enum EnemyAIState
